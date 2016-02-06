@@ -41,13 +41,7 @@ class MyPlayerBrain(object):
         #     return SpecialPowers.PLACE_4_TILES
         return SpecialPowers.NONE
 
-    def QueryTileOnly(self, map, me, hotelChains, players):
-        tile = random_element(me.tiles)
-        createdHotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
-        mergeSurvivor = next((hotel for hotel in hotelChains if hotel.is_active), None)
-        return PlayerPlayTile(tile, createdHotel, mergeSurvivor)
-
-    def QueryTileAndPurchase(self, map, me, hotelChains, players):
+    def choose_most_appropriate_tile(self, map, me, hotelChains, players):
         tile = None
         for t in me.tiles:
             # If a placement would cause a merge, see if it's a good idea for us.
@@ -62,7 +56,16 @@ class MyPlayerBrain(object):
 
         if tile is None:
             tile = random_element(me.tiles)
+        return tile
 
+    def QueryTileOnly(self, map, me, hotelChains, players):
+        tile = choose_most_appropriate_tile(map, me, hotelChains, players)
+        createdHotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
+        mergeSurvivor = next((hotel for hotel in hotelChains if hotel.is_active), None)
+        return PlayerPlayTile(tile, createdHotel, mergeSurvivor)
+
+    def QueryTileAndPurchase(self, map, me, hotelChains, players):
+        tile = choose_most_appropriate_tile(map, me, hotelChains, players)
         inactive = next((hotel for hotel in hotelChains if not hotel.is_active), None)
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
         turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
