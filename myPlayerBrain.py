@@ -43,17 +43,27 @@ class MyPlayerBrain(object):
         #     return SpecialPowers.PLACE_4_TILES
         return SpecialPowers.NONE
 
+    def get_adj_tiles(map, tile):
+        return get_adj_tiles(map, tile.x, tile.y)
+
+    def get_adj_tiles(map, x, y):
+        tiles = []
+        if (x > 0):
+            tiles.add(map.tiles[x - 1][y])
+        if (x < map.width - 1):
+            tiles.add(map.tiles[x + 1][y])
+        if (y > 0):
+            tiles.add(map.tiles[x][y - 1])
+        if (y < map.height - 1):
+            tiles.add(map.tiles[x][y + 1])
+        return tiles
+
     def check_merge(self, map, tile):
         hotels = set()
 
-        if ((tile.x > 0 and map.tiles[tile.x - 1][tile.y].type == MapTile.HOTEL):
-            hotels.add(map.tiles[tile.x - 1][tile.y].hotel)
-        if (tile.x < map.width - 1 and map.tiles[tile.x + 1][tile.y].type == MapTile.HOTEL):
-            hotels.add(map.tiles[tile.x + 1][tile.y].hotel)
-        if (tile.y > 0 and map.tiles[tile.x][tile.y - 1].type == MapTile.HOTEL):
-            hotels.add(map.tiles[tile.x][tile.y - 1].hotel)
-        if (tile.y < map.height - 1 and map.tiles[tile.x][tile.y + 1].type == MapTile.HOTEL)):
-            hotels.add(map.tiles[tile.x][tile.y + 1].hotel)
+        for tile in get_adj_tiles(map, tile):
+            if tile.type == MapTile.HOTEL:
+                hotels.add(tile)
 
         return hotels
 
@@ -79,10 +89,7 @@ class MyPlayerBrain(object):
                         break
 
             # Check around the tile to try to find adjacent singles.
-            if ((t.x > 0 and map.tiles[t.x - 1][t.y].type == MapTile.SINGLE)
-            or (t.x < map.width - 1 and map.tiles[t.x + 1][t.y].type == MapTile.SINGLE)
-            or (t.y > 0 and map.tiles[t.x][t.y - 1].type == MapTile.SINGLE)
-            or (t.y < map.height - 1 and map.tiles[t.x][t.y + 1].type == MapTile.SINGLE)):
+            if [adj for adj in get_adj_tiles(map, t) if adj.type == MapTile.SINGLE]:
                 tile = t
                 break
 
