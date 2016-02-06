@@ -139,7 +139,7 @@ class SpecialPowers(object):
 
 
 class StockOwner(object):
-    def __init__(self, owner, num_shares) 
+    def __init__(self, owner, num_shares):
         self.num_shares = num_shares
         self.owner = owner
 
