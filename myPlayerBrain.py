@@ -41,6 +41,21 @@ class MyPlayerBrain(object):
         #     return SpecialPowers.PLACE_4_TILES
         return SpecialPowers.NONE
 
+    def check_merge(self, map, tile):
+        hotels = set()
+
+        if ((tile.x > 0 and map.tiles[tile.x - 1][tile.y].type == MapTile.HOTEL):
+            hotels.add(map.tiles[tile.x - 1][tile.y].hotel)
+        if (tile.x < map.width - 1 and map.tiles[tile.x + 1][tile.y].type == MapTile.HOTEL):
+            hotels.add(map.tiles[tile.x + 1][tile.y].hotel)
+        if (tile.y > 0 and map.tiles[tile.x][tile.y - 1].type == MapTile.HOTEL):
+            hotels.add(map.tiles[tile.x][tile.y - 1].hotel)
+        if (tile.y < map.height - 1 and map.tiles[tile.x][tile.y + 1].type == MapTile.HOTEL)):
+            hotels.add(map.tiles[tile.x][tile.y + 1].hotel)
+
+        return hotels
+
+
     def choose_most_appropriate_tile(self, map, me, hotelChains, players):
         tile = None
         for t in me.tiles:
