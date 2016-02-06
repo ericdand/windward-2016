@@ -32,6 +32,7 @@ class MyPlayerBrain(object):
             avatar = None # avatar is optional
         self.avatar = avatar
         self.stage = 0
+        self.created_hotel_this_turn = False
 
     def Setup(self, map, me, hotelChains, players):
         pass #any setup code...
@@ -44,7 +45,11 @@ class MyPlayerBrain(object):
                 if t.type == MapTile.HOTEL or t.type == MapTile.SINGLE:
                     count += 1
         # We move forward one stage per 30 tiles placed.
-        self.stage = count/30 + 1
+        new_stage = count/15 + 1
+        if self.stage != new_stage:
+            print("{0} tiles placed. Stage advanced to stage {1}.".format(count, new_stage))
+            print("Cash on hand: {0}. Stocks: {1}.".format(me.cash, me.stock))
+            self.stage = new_stage
 
         # if rand.randint(0, 29) == 1:
         #     return SpecialPowers.DRAW_5_TILES
@@ -76,6 +81,7 @@ class MyPlayerBrain(object):
         return hotels
 
     def choose_most_appropriate_tile(self, map, me, hotelChains, players):
+        blacklist = []
         for t in me.tiles:
             # If a placement would cause a merge, see if it's a good idea for us.
             hotels = self.check_merge(map, t)
@@ -89,12 +95,23 @@ class MyPlayerBrain(object):
                     if largest == None or h.num_tiles > largest.num_tiles: largest = h
                     if smallest == None or h.num_tiles < smallest.num_tiles: smallest = h
                 # If we are the majority shareholder of the smaller chain, do the merge.
-                for o in smallest.first_majority_owners:
+                for o in smallest.first_majority_owners + smallest.second_majority_owners:
                     if o.owner == me.guid:
                         return t
+                    else:
+                        print("Blacklisted tile {0}.".format(t))
+                        blacklist.append(t)
+                        continue
 
             # Check around the tile to try to find adjacent singles.
             if [adj for adj in self.get_adj_tiles(map, t) if adj.type == MapTile.SINGLE]:
+                # If there are no available hotels to be made, then it is illegal to place this tile.
+                inactive_hotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
+                if inactive_hotel is None:
+                    blacklist.append(t)
+                    continue
+                print('Created "two-bomb" (new hotel) at ({0}, {1}).'.format(t.x, t.y))
+                self.created_hotel_this_turn = True
                 return t
 
             # If there are two adjacent tiles in our hand, play one of them.
@@ -102,6 +119,9 @@ class MyPlayerBrain(object):
                 if abs(t.x - o.x) <= 1 and abs(t.y - o.y) <= 1 and o is not t:
                     return t
 
+        acceptable_tiles = [t for t in me.tiles if t not in blacklist]
+        if len(acceptable_tiles) > 0:
+            return random_element(acceptable_tiles)
         return random_element(me.tiles)
 
     def QueryTileOnly(self, map, me, hotelChains, players):
@@ -112,26 +132,35 @@ class MyPlayerBrain(object):
 
     def QueryTileAndPurchase(self, map, me, hotelChains, players):
         tile = self.choose_most_appropriate_tile(map, me, hotelChains, players)
-        inactive = next((hotel for hotel in hotelChains if not hotel.is_active), None)
+        inactive = None
+        if self.created_hotel_this_turn:
+            inactive = next((hotel for hotel in hotelChains if not hotel.is_active), None)
+            if inactive is None:
+                print("ERROR: No inactive hotel chains!")
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
-        turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
-        turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
+        if self.created_hotel_this_turn:
+            # If we created a hotel this turn, then we want to buy another stock in it immediately.
+            turn.Buy.append(lib.HotelStock(inactive, 1))
+            self.created_hotel_this_turn = False
+        # turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
+        # turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
 
-        if rand.randint(0, 20) is not 1:
-            return turn
-        temp_rand = rand.randint(0, 2)
-        if temp_rand is 0:
-            turn.Card = SpecialPowers.BUY_5_STOCK
-            turn.Buy.append(lib.HotelStock(random_element(hotelChains), 3))
-            return turn
-        elif temp_rand is 1:
-            turn.Card = SpecialPowers.FREE_3_STOCK
-            return turn
-        else:
-            if (len(me.stock) > 0):
-                turn.Card = SpecialPowers.TRADE_2_STOCK
-                turn.Trade.append(TradeStock(random_element(me.stock).chain, random_element(hotelChains)))
-                return turn
+        return turn
+        # if rand.randint(0, 20) is not 1:
+        #     return turn
+        # temp_rand = rand.randint(0, 2)
+        # if temp_rand is 0:
+        #     turn.Card = SpecialPowers.BUY_5_STOCK
+        #     turn.Buy.append(lib.HotelStock(random_element(hotelChains), 3))
+        #     return turn
+        # elif temp_rand is 1:
+        #     turn.Card = SpecialPowers.FREE_3_STOCK
+        #     return turn
+        # else:
+        #     if (len(me.stock) > 0):
+        #         turn.Card = SpecialPowers.TRADE_2_STOCK
+        #         turn.Trade.append(TradeStock(random_element(me.stock).chain, random_element(hotelChains)))
+        #         return turn
 
     def QueryMergeStock(self, map, me, hotelChains, players, survivor, defunct):
         myStock = next((stock for stock in me.stock if stock.chain == defunct.name), None)
