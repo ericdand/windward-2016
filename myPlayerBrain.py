@@ -99,7 +99,7 @@ class MyPlayerBrain(object):
 
             # If there are two adjacent tiles in our hand, play one of them.
             for o in me.tiles:
-                if abs(t.x - o.x) <= 1 and abs(t.y - o.y) <= 1:
+                if abs(t.x - o.x) <= 1 and abs(t.y - o.y) <= 1 and o is not t:
                     return t
 
         return random_element(me.tiles)
