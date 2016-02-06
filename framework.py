@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
   ----------------------------------------------------------------------------
   "THE BEER-WARE LICENSE"
@@ -6,7 +5,7 @@
   stuff. If you meet an employee from Windward some day, and you think this
   stuff is worth it, you can buy them a beer in return. Windward Studios
   ----------------------------------------------------------------------------
-"""
+  """
 
 ## first_or_default = next((x for x in lst if ...), None)
 
@@ -23,7 +22,7 @@ import myPlayerBrain
 from debug import printrap
 
 #local machine
-DEFAULT_ADDRESS = "134.87.173.83"
+DEFAULT_ADDRESS = "127.0.0.1"
 
 
 class Framework(object):
@@ -78,9 +77,9 @@ class Framework(object):
             name = xml.tag
             printrap("Received message of type: " + name)
             self.guid = xml.get('my-guid')
-            map = lib.GameMap(element=xml.find('map')) # need to handle the actual column/rows
-            players = [lib.Player(player) for player in xml.find('players')]
             hotels = [lib.HotelChain(hotel) for hotel in xml.find('hotels')]
+            map = lib.GameMap(element=xml.find('map'), hotelChains=hotels) # need to handle the actual column/rows
+            players = [lib.Player(player) for player in xml.find('players')]
             #fix stock pointers to right place...
 
             #pdb.set_trace()

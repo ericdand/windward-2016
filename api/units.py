@@ -1,19 +1,20 @@
 class GameMap(object):
-    def __init__(self, x=0, y=0, element=None):
+    def __init__(self, x=0, y=0, element=None, hotelChains=None):
         self.height = y
         self.width = x
-        self.tiles = matrix = [[MapTile(MapTile.UNDEVELOPED)] * self.width for i in range(self.height)]
+        self.tiles = matrix = [[MapTile(MapTile.UNDEVELOPED)] * self.height for i in range(self.width)]
         if element is not None:
-            self.fromXml(element)
+            self.fromXml(element, hotelChains)
 
-    def fromXml(self, element):
-        self.y = element.attrib.get('height')
-        self.x = element.attrib.get('width')
+    def fromXml(self, element, hotelChains=None):
+        self.height = int(element.attrib.get('height'))
+        self.width = int(element.attrib.get('width'))
         self.tiles = []
-        for row in element:
-            string = row.text
-            self.tiles.append([MapTile(tile) for tile in string.split(';') if tile is not ''])
-        
+        for column in element.iter("column"):
+            string = column.text
+            self.tiles.append([MapTile(tile.split(":")[0], get_hotel_name(hotelChains, tile.split(":")[1])) for tile in string.split(';') if tile is not ''])
+
+
 
     def is_tile_undeveloped(self, tile):
         return tile.Type == MapTile.UNDEVELOPED
@@ -23,6 +24,11 @@ class GameMap(object):
 
     def __str__(self):
         return "{}*{} map".format(self.width, self.height)
+
+def get_hotel_name(hotelChains, name):
+    if hotelChains == None:
+        return None
+    return next((a for a in hotelChains if a.name == name), None)
 
 
 class HotelChain(object):
