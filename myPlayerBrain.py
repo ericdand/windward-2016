@@ -35,14 +35,25 @@ class MyPlayerBrain(object):
         pass #any setup code...
 
     def QuerySpecialPowersBeforeTurn(self, map, me, hotelChains, players):
-        if rand.randint(0, 29) == 1:
-            return SpecialPowers.DRAW_5_TILES
-        if rand.randint(0, 29) == 1:
-            return SpecialPowers.PLACE_4_TILES
+        # if rand.randint(0, 29) == 1:
+        #     return SpecialPowers.DRAW_5_TILES
+        # if rand.randint(0, 29) == 1:
+        #     return SpecialPowers.PLACE_4_TILES
         return SpecialPowers.NONE
 
     def QueryTileOnly(self, map, me, hotelChains, players):
-        tile = random_element(me.tiles)
+        tile = None
+        for t in me.tiles:
+            # Check around the tile to try to find adjacent singles.
+            if ((t.x > 0 and map.tiles[t.x - 1][t.y].type == MapTile.SINGLE)
+            or (t.x < map.width - 1 and map.tiles[t.x + 1][t.y].type == MapTile.SINGLE)
+            or (t.y > 0 and map.tiles[t.x][t.y - 1].type == MapTile.SINGLE)
+            or (t.y < map.height - 1 and map.tiles[t.x][t.y + 1].type == MapTile.SINGLE)):
+                tile = t
+                break
+
+        if tile is None:
+            tile = random_element(me.tiles)
         createdHotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
         mergeSurvivor = next((hotel for hotel in hotelChains if hotel.is_active), None)
         return PlayerPlayTile(tile, createdHotel, mergeSurvivor)
