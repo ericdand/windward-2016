@@ -17,10 +17,10 @@ class GameMap(object):
 
 
     def is_tile_undeveloped(self, tile):
-        return tile.Type == MapTile.UNDEVELOPED
+        return tile.type == MapTile.UNDEVELOPED
 
     def is_tile_unplayable(self, tile):
-        return tile.Type is not MapTile.UNDEVELOPED and tile.Type is MapTile.UNPLAYABLE_NO_AVAIL_CHAINS
+        return tile.type is not MapTile.UNDEVELOPED and tile.type is MapTile.UNPLAYABLE_NO_AVAIL_CHAINS
 
     def __str__(self):
         return "{}*{} map".format(self.width, self.height)
@@ -38,8 +38,8 @@ class HotelChain(object):
         self.name = element.get('name')
         self.start_price = int(element.get('start-price'))
         self.num_tiles = int(element.get('num-tiles'))
-        self.is_active = bool(element.get('is-active'))
-        self.is_safe = bool(element.get('is-safe'))
+        self.is_active = bool(element.get('is-active').lower() == "true")
+        self.is_safe = bool(element.get('is-safe').lower() == "true")
         if element.find('owners') is not None:
             self.owners = [StockOwner(owner.get('guid'), owner.get('num-shares')) for owner in element.find('owners')]
         if element.find('first-majority') is not None:
@@ -139,7 +139,7 @@ class SpecialPowers(object):
 
 
 class StockOwner(object):
-    def __init__(self, num_shares, owner):
+    def __init__(self, owner, num_shares) 
         self.num_shares = num_shares
         self.owner = owner
 
