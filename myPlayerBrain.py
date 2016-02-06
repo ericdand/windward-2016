@@ -35,6 +35,8 @@ class MyPlayerBrain(object):
         pass #any setup code...
 
     def QuerySpecialPowersBeforeTurn(self, map, me, hotelChains, players):
+        # TODO: Count number of tiles, determine which "stage" of the game we're in.
+
         # if rand.randint(0, 29) == 1:
         #     return SpecialPowers.DRAW_5_TILES
         # if rand.randint(0, 29) == 1:
@@ -60,6 +62,21 @@ class MyPlayerBrain(object):
         tile = None
         for t in me.tiles:
             # If a placement would cause a merge, see if it's a good idea for us.
+            hotels = check_merge(map, t)
+            if hotels is not None:
+                # See whether we own any stock in either of the hotels.
+                # If we own stock in the smaller one, we want that shareholder bonus!
+                largest = hotels[0]
+                smallest = hotels[1]
+                # TODO: Handle multi-chain merges.
+                for h in hotels:
+                    if h.size > largest.size: largest = h
+                    if h.size < smallest.size: smallest = h
+                # If we are the majority shareholder of the smaller chain, do the merge.
+                for o in smallest.first_majority_owners:
+                    if o.guid == me.guid:
+                        tile = t
+                        break
 
             # Check around the tile to try to find adjacent singles.
             if ((t.x > 0 and map.tiles[t.x - 1][t.y].type == MapTile.SINGLE)
