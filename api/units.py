@@ -9,9 +9,11 @@ class GameMap(object):
     def fromXml(self, element):
         self.y = element.attrib.get('height')
         self.x = element.attrib.get('width')
+        self.tiles = []
         for row in element:
             string = row.text
-            self.tiles = [MapTile(tile) for tile in string.split(';') if tile is not '']
+            self.tiles.append([MapTile(tile) for tile in string.split(';') if tile is not ''])
+        
 
     def is_tile_undeveloped(self, tile):
         return tile.Type == MapTile.UNDEVELOPED
