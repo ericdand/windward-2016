@@ -1,6 +1,7 @@
 import random as rand
 import api.units as lib
 from api.units import SpecialPowers
+from api.units import MapTile
 
 NAME = "Wintermute"
 SCHOOL = "University of Victoria"
@@ -30,12 +31,20 @@ class MyPlayerBrain(object):
         except IOError:
             avatar = None # avatar is optional
         self.avatar = avatar
+        self.stage = 0
 
     def Setup(self, map, me, hotelChains, players):
         pass #any setup code...
 
     def QuerySpecialPowersBeforeTurn(self, map, me, hotelChains, players):
-        # TODO: Count number of tiles, determine which "stage" of the game we're in.
+        # Count number of tiles to determine which "stage" of the game we're in.
+        count = 0
+        for row in map.tiles:
+            for t in row:
+                if t.type == MapTile.HOTEL or t.type == MapTile.SINGLE:
+                    count += 1
+        # We move forward one stage per 30 tiles placed.
+        self.stage = count/30 + 1
 
         # if rand.randint(0, 29) == 1:
         #     return SpecialPowers.DRAW_5_TILES
@@ -43,68 +52,66 @@ class MyPlayerBrain(object):
         #     return SpecialPowers.PLACE_4_TILES
         return SpecialPowers.NONE
 
-    def get_adj_tiles(map, tile):
-        return get_adj_tiles(map, tile.x, tile.y)
-
-    def get_adj_tiles(map, x, y):
+    def get_adj_tiles(self, map, tile):
         tiles = []
+        x = tile.x
+        y = tile.y
         if (x > 0):
-            tiles.add(map.tiles[x - 1][y])
+            tiles.append(map.tiles[x - 1][y])
         if (x < map.width - 1):
-            tiles.add(map.tiles[x + 1][y])
+            tiles.append(map.tiles[x + 1][y])
         if (y > 0):
-            tiles.add(map.tiles[x][y - 1])
+            tiles.append(map.tiles[x][y - 1])
         if (y < map.height - 1):
-            tiles.add(map.tiles[x][y + 1])
+            tiles.append(map.tiles[x][y + 1])
         return tiles
 
     def check_merge(self, map, tile):
         hotels = set()
 
-        for tile in get_adj_tiles(map, tile):
+        for tile in self.get_adj_tiles(map, tile):
             if tile.type == MapTile.HOTEL:
-                hotels.add(tile)
+                hotels.add(tile.hotel)
 
         return hotels
 
-
     def choose_most_appropriate_tile(self, map, me, hotelChains, players):
-        tile = None
         for t in me.tiles:
             # If a placement would cause a merge, see if it's a good idea for us.
-            hotels = check_merge(map, t)
-            if hotels is not None:
+            hotels = self.check_merge(map, t)
+            if len(hotels) > 0:
                 # See whether we own any stock in either of the hotels.
                 # If we own stock in the smaller one, we want that shareholder bonus!
-                largest = hotels[0]
-                smallest = hotels[1]
+                largest = None
+                smallest = None
                 # TODO: Handle multi-chain merges.
                 for h in hotels:
-                    if h.size > largest.size: largest = h
-                    if h.size < smallest.size: smallest = h
+                    if largest == None or h.num_tiles > largest.num_tiles: largest = h
+                    if smallest == None or h.num_tiles < smallest.num_tiles: smallest = h
                 # If we are the majority shareholder of the smaller chain, do the merge.
                 for o in smallest.first_majority_owners:
-                    if o.guid == me.guid:
-                        tile = t
-                        break
+                    if o.owner == me.guid:
+                        return t
 
             # Check around the tile to try to find adjacent singles.
-            if [adj for adj in get_adj_tiles(map, t) if adj.type == MapTile.SINGLE]:
-                tile = t
-                break
+            if [adj for adj in self.get_adj_tiles(map, t) if adj.type == MapTile.SINGLE]:
+                return t
 
-        if tile is None:
-            tile = random_element(me.tiles)
-        return tile
+            # If there are two adjacent tiles in our hand, play one of them.
+            for o in me.tiles:
+                if abs(t.x - o.x) <= 1 and abs(t.y - o.y) <= 1:
+                    return t
+
+        return random_element(me.tiles)
 
     def QueryTileOnly(self, map, me, hotelChains, players):
-        tile = choose_most_appropriate_tile(map, me, hotelChains, players)
+        tile = self.choose_most_appropriate_tile(map, me, hotelChains, players)
         createdHotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
         mergeSurvivor = next((hotel for hotel in hotelChains if hotel.is_active), None)
         return PlayerPlayTile(tile, createdHotel, mergeSurvivor)
 
     def QueryTileAndPurchase(self, map, me, hotelChains, players):
-        tile = choose_most_appropriate_tile(map, me, hotelChains, players)
+        tile = self.choose_most_appropriate_tile(map, me, hotelChains, players)
         inactive = next((hotel for hotel in hotelChains if not hotel.is_active), None)
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
         turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
