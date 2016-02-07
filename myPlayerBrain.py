@@ -3,6 +3,7 @@ import api.units as lib
 from api.units import SpecialPowers
 from api.units import MapTile
 
+NAME = "Wintermute"
 NAME = "Wintermute II"
 SCHOOL = "University of Victoria"
 
@@ -44,8 +45,7 @@ class MyPlayerBrain(object):
             for t in row:
                 if t.type == MapTile.HOTEL or t.type == MapTile.SINGLE:
                     count += 1
-        # We move forward one stage per 30 tiles placed.
-        new_stage = count/10
+        new_stage = 2 if count > 50 else 1
         if self.stage != new_stage:
             print("{0} tiles placed. Stage advanced to stage {1}.".format(count, new_stage))
             print("Cash on hand: {0}. Stocks: {1}.".format(me.cash, [str(s) for s in me.stock]))
@@ -162,13 +162,28 @@ class MyPlayerBrain(object):
         #         return turn
 
     def QueryMergeStock(self, map, me, hotelChains, players, survivor, defunct):
-        # if stage 1, trade 2 defunct shares for 1 survivor share, be absorbed
         myStock = next((stock for stock in me.stock if stock.chain == defunct.name), None)
-        #if stage  == 1:
         num = myStock.num_shares
-        trade = myStock.num_shares / 2
-        sell = num - trade
-        return PlayerMerge(sell, 0, trade)
+        buy = 0
+        if self.stage == 1:
+            trade = myStock.num_shares / 2
+            sell = num - trade
+        else:
+            # if maj num shares < 13, trade
+            # else if can reach min by trading, trade
+            # else sell
+            if survivor.first_majority_owners[0].num_shares < 13:
+                trade = myStock.num_shares / 2
+                sell = num - trade
+            else:
+                second_maj = survivor.second_majority_owners[0].num_shares
+                if num + (myStock.num_shares / 2) >= second_maj:
+                    trade = myStock.num_shares / 2
+                    sell = num - trade
+                else:
+                    trade = 0
+                    sell = num
+        return PlayerMerge(sell, buy, trade)
 
 class PlayerMerge(object):
     def __init__(self, sell, keep, trade):
