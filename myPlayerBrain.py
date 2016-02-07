@@ -44,7 +44,7 @@ class MyPlayerBrain(object):
             for t in row:
                 if t.type == MapTile.HOTEL or t.type == MapTile.SINGLE:
                     count += 1
-        new_stage = 2 if count > 50 else 1
+        new_stage = 2 if count > 40 else 1
         if self.stage != new_stage:
             print("{0} tiles placed. Stage advanced to stage {1}.".format(count, new_stage))
             print("Cash on hand: {0}. Stocks: {1}.".format(me.cash, [str(s) for s in me.stock]))
@@ -178,10 +178,12 @@ class MyPlayerBrain(object):
                 continue
             # Figure out which hotel is largest, as long as nobody owns a crazy majority of it.
             if largest_hotel is None or h.num_tiles > largest_hotel.num_tiles:
-                if h.first_majority_owners[0].num_shares < 8:
-                    print("Largest hotel is {0}.".format(h))
-                    largest_hotel = h
+                # if h.first_majority_owners[0].num_shares < 8:
+                print("Largest hotel is {0}.".format(h))
+                largest_hotel = h
 
+            if self.stage > 1:
+                continue
             majority_owner = h.first_majority_owners[0]
             shares_owned = 0
             for s in me.stock:
@@ -199,11 +201,13 @@ class MyPlayerBrain(object):
         if remaining_purchases > 0 and largest_hotel is not None:
             # Buy as many shares of the biggest hotel as we can.
             if remaining_purchases * largest_hotel.stock_price <= me.cash:
+                print("Buying {0} shares of {1}".format(remaining_purchases, h))
                 turn.Buy.append(lib.HotelStock(h, remaining_purchases))
                 remaining_purchases = 0
             elif SpecialPowers.FREE_3_STOCK in me.powers:
-                turn.Buy.append(lib.HotelStock(h, 3))
+                print("Buying {0} shares of {1}".format(remaining_purchases, h))
                 turn.Card = SpecialPowers.FREE_3_STOCK
+                turn.Buy.append(lib.HotelStock(h, 3))
                 remaining_purchases = 0
             else:
                 # Buy what you can!
@@ -212,9 +216,10 @@ class MyPlayerBrain(object):
                 while estimated_cost <= me.cash and num_to_buy <= remaining_purchases:
                     num_to_buy += 1
                     estimated_cost += largest_hotel.stock_price
+                print("Buying {0} shares of {1}".format(num_to_buy, h))
                 turn.Buy.append(lib.HotelStock(h, num_to_buy))
                 remaining_purchases -= num_to_buy
-
+        print("Largest hotel: {0}".format(largest_hotel))
 
         self.created_hotel_this_turn = False
         return turn
@@ -224,21 +229,11 @@ class MyPlayerBrain(object):
         num = myStock.num_shares
         buy = 0
         sell = myStock.num_shares % 2
+        trade = 0
         if self.stage == 1:
             trade = myStock.num_shares - sell
         else:
-            # if maj num shares < 13, trade
-            # else if can reach min by trading, trade
-            # else sell
-            if survivor.first_majority_owners[0].num_shares < 13:
-                trade = myStock.num_shares - sell
-            else:
-                second_maj = survivor.second_majority_owners[0].num_shares
-                if num + (myStock.num_shares / 2) >= second_maj:
-                    trade = myStock.num_shares - sell
-                else:
-                    trade = 0
-                    sell = num
+            sell = num
         return PlayerMerge(sell, buy, trade)
 
 class PlayerMerge(object):
