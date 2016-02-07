@@ -82,37 +82,60 @@ class MyPlayerBrain(object):
 
     def choose_most_appropriate_tile(self, map, me, hotelChains, players):
         blacklist = []
-        for t in me.tiles:
-            # If a placement would cause a merge, see if it's a good idea for us.
-            hotels = self.check_merge(map, t)
-            if len(hotels) > 0:
-                # See whether we own any stock in either of the hotels.
-                # If we own stock in the smaller one, we want that shareholder bonus!
-                largest = None
-                smallest = None
-                # TODO: Handle multi-chain merges.
-                for h in hotels:
-                    if largest == None or h.num_tiles > largest.num_tiles: largest = h
-                    if smallest == None or h.num_tiles < smallest.num_tiles: smallest = h
-                # If we are the majority shareholder of the smaller chain, do the merge.
-                for o in smallest.first_majority_owners + smallest.second_majority_owners:
-                    if o.owner == me.guid:
-                        return t
-                    else:
+        if self.stage == 2:
+            for t in me.tiles:
+                # Try to merge.
+                hotels = self.check_merge(map, t)
+                if len(hotels) > 0:
+                    merges = [(h1, h2) for h1 in hotels for h2 in hotels if h1 is not h2]
+                    for h1, h2 in merges:
+                        own1 = me.guid in [o.owner for o in h1.first_majority_owners]
+                        own2 = me.guid in [o.owner for o in h2.first_majority_owners]
+                        if h1.num_tiles == h2.num_tiles and own1 or own2: return t
+                        elif h1.num_tiles > h2.num_tiles and own1: return t
+                        elif own2: return t
+                        # Else blacklist.
                         print("Blacklisted tile {0}.".format(t))
                         blacklist.append(t)
                         continue
 
-            # Check around the tile to try to find adjacent singles.
-            if [adj for adj in self.get_adj_tiles(map, t) if adj.type == MapTile.SINGLE]:
-                # If there are no available hotels to be made, then it is illegal to place this tile.
-                inactive_hotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
-                if inactive_hotel is None:
-                    blacklist.append(t)
-                    continue
-                print('Created "two-bomb" (new hotel) at ({0}, {1}).'.format(t.x, t.y))
-                self.created_hotel_this_turn = True
-                return t
+                # Grow a cluster.
+                for tile in self.get_adj_tiles(map, t):
+                    if me.guid in [o.owner for o in tile.hotel.first_majority_owners]:
+                        return t
+
+        else:
+            for t in me.tiles:
+                # If a placement would cause a merge, see if it's a good idea for us.
+                hotels = self.check_merge(map, t)
+                if len(hotels) > 0:
+                    # See whether we own any stock in either of the hotels.
+                    # If we own stock in the smaller one, we want that shareholder bonus!
+                    largest = None
+                    smallest = None
+                    # TODO: Handle multi-chain merges.
+                    for h in hotels:
+                        if largest == None or h.num_tiles > largest.num_tiles: largest = h
+                        if smallest == None or h.num_tiles < smallest.num_tiles: smallest = h
+                    # If we are the majority shareholder of the smaller chain, do the merge.
+                    for o in smallest.first_majority_owners + smallest.second_majority_owners:
+                        if o.owner == me.guid:
+                            return t
+                        else:
+                            print("Blacklisted tile {0}.".format(t))
+                            blacklist.append(t)
+                            continue
+
+                # Check around the tile to try to find adjacent singles.
+                if [adj for adj in self.get_adj_tiles(map, t) if adj.type == MapTile.SINGLE]:
+                    # If there are no available hotels to be made, then it is illegal to place this tile.
+                    inactive_hotel = next((hotel for hotel in hotelChains if not hotel.is_active), None)
+                    if inactive_hotel is None:
+                        blacklist.append(t)
+                        continue
+                    print('Created "two-bomb" (new hotel) at ({0}, {1}).'.format(t.x, t.y))
+                    self.created_hotel_this_turn = True
+                    return t
 
             # If there are two adjacent tiles in our hand, play one of them.
             for o in me.tiles:
