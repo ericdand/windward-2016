@@ -163,6 +163,10 @@ class MyPlayerBrain(object):
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
 
         remaining_purchases = 3
+        if rand.randint(0, 20) is 1:
+            remaining_purchases = 5
+            turn.Card = SpecialPowers.BUY_5_STOCK
+
         if self.created_hotel_this_turn:
             # If we created a hotel this turn, then we want to buy another stock in it immediately.
             turn.Buy.append(lib.HotelStock(inactive, 1))
@@ -175,6 +179,7 @@ class MyPlayerBrain(object):
             # Figure out which hotel is largest, as long as nobody owns a crazy majority of it.
             if largest_hotel is None or h.num_tiles > largest_hotel.num_tiles:
                 if h.first_majority_owners[0].num_shares < 8:
+                    print("Largest hotel is {0}.".format(h))
                     largest_hotel = h
 
             majority_owner = h.first_majority_owners[0]
@@ -196,6 +201,10 @@ class MyPlayerBrain(object):
             if remaining_purchases * largest_hotel.stock_price <= me.cash:
                 turn.Buy.append(lib.HotelStock(h, remaining_purchases))
                 remaining_purchases = 0
+            elif SpecialPowers.FREE_3_STOCK in me.powers:
+                turn.Buy.append(lib.HotelStock(h, 3))
+                turn.Card = SpecialPowers.FREE_3_STOCK
+                remaining_purchases = 0
             else:
                 # Buy what you can!
                 estimated_cost = 0
@@ -209,41 +218,24 @@ class MyPlayerBrain(object):
 
         self.created_hotel_this_turn = False
         return turn
-        # if rand.randint(0, 20) is not 1:
-        #     return turn
-        # temp_rand = rand.randint(0, 2)
-        # if temp_rand is 0:
-        #     turn.Card = SpecialPowers.BUY_5_STOCK
-        #     turn.Buy.append(lib.HotelStock(random_element(hotelChains), 3))
-        #     return turn
-        # elif temp_rand is 1:
-        #     turn.Card = SpecialPowers.FREE_3_STOCK
-        #     return turn
-        # else:
-        #     if (len(me.stock) > 0):
-        #         turn.Card = SpecialPowers.TRADE_2_STOCK
-        #         turn.Trade.append(TradeStock(random_element(me.stock).chain, random_element(hotelChains)))
-        #         return turn
 
     def QueryMergeStock(self, map, me, hotelChains, players, survivor, defunct):
         myStock = next((stock for stock in me.stock if stock.chain == defunct.name), None)
         num = myStock.num_shares
         buy = 0
+        sell = myStock.num_shares % 2
         if self.stage == 1:
-            trade = myStock.num_shares / 2
-            sell = num - trade
+            trade = myStock.num_shares - sell
         else:
             # if maj num shares < 13, trade
             # else if can reach min by trading, trade
             # else sell
             if survivor.first_majority_owners[0].num_shares < 13:
-                trade = myStock.num_shares / 2
-                sell = num - trade
+                trade = myStock.num_shares - sell
             else:
                 second_maj = survivor.second_majority_owners[0].num_shares
                 if num + (myStock.num_shares / 2) >= second_maj:
-                    trade = myStock.num_shares / 2
-                    sell = num - trade
+                    trade = myStock.num_shares - sell
                 else:
                     trade = 0
                     sell = num
