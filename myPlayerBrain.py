@@ -162,17 +162,28 @@ class MyPlayerBrain(object):
         #         return turn
 
     def QueryMergeStock(self, map, me, hotelChains, players, survivor, defunct):
-        # if stage 1, trade 2 defunct shares for 1 survivor share, be absorbed
         myStock = next((stock for stock in me.stock if stock.chain == defunct.name), None)
-        if stage  == 1:
-            num = myStock.num_shares
+        num = myStock.num_shares
+        buy = 0
+        if self.stage == 1:
             trade = myStock.num_shares / 2
             sell = num - trade
-            return PlayerMerge(sell, 0, trade)
         else:
             # if maj num shares < 13, trade
             # else if can reach min by trading, trade
             # else sell
+            if survivor.first_majority_owners[0].num_shares < 13:
+                trade = myStock.num_shares / 2
+                sell = num - trade
+            else:
+                second_maj = survivor.second_majority_owners[0].num_shares
+                if num + (myStock.num_shares / 2) >= second_maj:
+                    trade = myStock.num_shares / 2
+                    sell = num - trade
+                else:
+                    trade = 0
+                    sell = num
+        return PlayerMerge(sell, buy, trade)
 
 class PlayerMerge(object):
     def __init__(self, sell, keep, trade):
