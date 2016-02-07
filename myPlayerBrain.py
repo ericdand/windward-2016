@@ -4,7 +4,6 @@ from api.units import SpecialPowers
 from api.units import MapTile
 
 NAME = "Wintermute"
-NAME = "Wintermute II"
 SCHOOL = "University of Victoria"
 
 
@@ -161,11 +160,52 @@ class MyPlayerBrain(object):
             if inactive is None:
                 print("ERROR: No inactive hotel chains!")
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
+
         remaining_purchases = 3
         if self.created_hotel_this_turn:
             # If we created a hotel this turn, then we want to buy another stock in it immediately.
             turn.Buy.append(lib.HotelStock(inactive, 1))
             remaining_purchases -= 1
+        largest_hotel = None
+        for h in [h for h in hotelChains if h.is_active]:
+            # Skip whichever chain we're already the owner of.
+            if me.guid in [o.owner for o in h.first_majority_owners]:
+                continue
+            # Figure out which hotel is largest, as long as nobody owns a crazy majority of it.
+            if largest_hotel is None or h.num_tiles > largest_hotel.num_tiles:
+                if h.first_majority_owners[0].num_shares < 8:
+                    largest_hotel = h
+
+            majority_owner = h.first_majority_owners[0]
+            shares_owned = 0
+            for s in me.stock:
+                if s.chain == h:
+                    shares_owned = s.num_shares
+            # If we can buy enough of a share to become the majority shareholder in one turn, then do it.
+            if int(majority_owner.num_shares) - shares_owned < remaining_purchases \
+                    and h.stock_price * remaining_purchases <= me.cash:
+                print("Majority owner owns {0} shares of {1}, we own {2}.".format(majority_owner.num_shares, h.name, shares_owned))
+                print("Buying {0} shares to become majority shareholder.".format(remaining_purchases))
+                turn.Buy.append(lib.HotelStock(h, remaining_purchases))
+                remaining_purchases = 0
+                break
+
+        if remaining_purchases > 0 and largest_hotel is not None:
+            # Buy as many shares of the biggest hotel as we can.
+            if remaining_purchases * largest_hotel.stock_price <= me.cash:
+                turn.Buy.append(lib.HotelStock(h, remaining_purchases))
+                remaining_purchases = 0
+            else:
+                # Buy what you can!
+                estimated_cost = 0
+                num_to_buy = 0
+                while estimated_cost <= me.cash and num_to_buy <= remaining_purchases:
+                    num_to_buy += 1
+                    estimated_cost += largest_hotel.stock_price
+                turn.Buy.append(lib.HotelStock(h, num_to_buy))
+                remaining_purchases -= num_to_buy
+
+
         self.created_hotel_this_turn = False
         return turn
         # if rand.randint(0, 20) is not 1:
