@@ -44,7 +44,7 @@ class MyPlayerBrain(object):
                 if t.type == MapTile.HOTEL or t.type == MapTile.SINGLE:
                     count += 1
         # We move forward one stage per 30 tiles placed.
-        self.stage = count/30 + 1
+        self.stage = 2 if count > 50 else 1
 
         # if rand.randint(0, 29) == 1:
         #     return SpecialPowers.DRAW_5_TILES
@@ -136,11 +136,15 @@ class MyPlayerBrain(object):
     def QueryMergeStock(self, map, me, hotelChains, players, survivor, defunct):
         # if stage 1, trade 2 defunct shares for 1 survivor share, be absorbed
         myStock = next((stock for stock in me.stock if stock.chain == defunct.name), None)
-        #if stage  == 1:
-        num = myStock.num_shares
-        trade = myStock.num_shares / 2
-        sell = num - trade
-        return PlayerMerge(sell, 0, trade)
+        if stage  == 1:
+            num = myStock.num_shares
+            trade = myStock.num_shares / 2
+            sell = num - trade
+            return PlayerMerge(sell, 0, trade)
+        else:
+            # if maj num shares < 13, trade
+            # else if can reach min by trading, trade
+            # else sell
 
 class PlayerMerge(object):
     def __init__(self, sell, keep, trade):
