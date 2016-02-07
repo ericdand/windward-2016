@@ -3,7 +3,7 @@ import api.units as lib
 from api.units import SpecialPowers
 from api.units import MapTile
 
-NAME = "Wintermute"
+NAME = "Wintermute II"
 SCHOOL = "University of Victoria"
 
 
@@ -45,10 +45,10 @@ class MyPlayerBrain(object):
                 if t.type == MapTile.HOTEL or t.type == MapTile.SINGLE:
                     count += 1
         # We move forward one stage per 30 tiles placed.
-        new_stage = count/15 + 1
+        new_stage = count/10
         if self.stage != new_stage:
             print("{0} tiles placed. Stage advanced to stage {1}.".format(count, new_stage))
-            print("Cash on hand: {0}. Stocks: {1}.".format(me.cash, me.stock))
+            print("Cash on hand: {0}. Stocks: {1}.".format(me.cash, [str(s) for s in me.stock]))
             self.stage = new_stage
 
         # if rand.randint(0, 29) == 1:
@@ -138,13 +138,12 @@ class MyPlayerBrain(object):
             if inactive is None:
                 print("ERROR: No inactive hotel chains!")
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
+        remaining_purchases = 3
         if self.created_hotel_this_turn:
             # If we created a hotel this turn, then we want to buy another stock in it immediately.
             turn.Buy.append(lib.HotelStock(inactive, 1))
-            self.created_hotel_this_turn = False
-        # turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
-        # turn.Buy.append(lib.HotelStock(random_element(hotelChains), rand.randint(1, 3)))
-
+            remaining_purchases -= 1
+        self.created_hotel_this_turn = False
         return turn
         # if rand.randint(0, 20) is not 1:
         #     return turn
