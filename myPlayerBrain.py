@@ -138,11 +138,28 @@ class MyPlayerBrain(object):
             if inactive is None:
                 print("ERROR: No inactive hotel chains!")
         turn = PlayerTurn(tile=tile, created_hotel=inactive, merge_survivor=inactive)
+
         remaining_purchases = 3
         if self.created_hotel_this_turn:
             # If we created a hotel this turn, then we want to buy another stock in it immediately.
             turn.Buy.append(lib.HotelStock(inactive, 1))
             remaining_purchases -= 1
+        for h in [h for h in hotelChains if h.is_active]:
+            # Skip whichever chain we're already the owner of.
+            if me.guid in [o.owner for o in h.first_majority_owners]:
+                continue
+            majority_owner = h.first_majority_owners[0]
+            shares_owned = 0
+            for s in me.stock:
+                if s.chain == h:
+                    shares_owned = s.num_shares
+            # If we can buy enough of a share to become the majority shareholder in one turn, then do it.
+            if int(majority_owner.num_shares) - shares_owned < remaining_purchases:
+                print("Majority owner owns {0} shares of {1}, we own {2}.".format(majority_owner.num_shares, h.name, shares_owned))
+                print("Buying {0} shares to become majority shareholder.".format(remaining_purchases))
+                turn.Buy.append(lib.HotelStock(h, remaining_purchases))
+            break
+
         self.created_hotel_this_turn = False
         return turn
         # if rand.randint(0, 20) is not 1:
