@@ -100,8 +100,9 @@ class MyPlayerBrain(object):
 
                 # Grow a cluster.
                 for tile in self.get_adj_tiles(map, t):
-                    if me.guid in [o.owner for o in tile.hotel.first_majority_owners]:
-                        return t
+                    if tile.type == MapTile.HOTEL:
+                        if me.guid in [o.owner for o in tile.hotel.first_majority_owners]:
+                            return t
 
         else:
             for t in me.tiles:
